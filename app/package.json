@@ -1,0 +1,39 @@
+{
+  "name": "chacha-chaudhary-missing-mangoes",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "lint": "eslint \"src/**/*.{ts,tsx}\""
+  },
+  "dependencies": {
+    "framer-motion": "^12.23.22",
+    "react": "19.2.0-canary-86181134-20251001",
+    "react-dom": "19.2.0-canary-86181134-20251001",
+    "zustand": "^4.5.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.11.1",
+    "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/react": "^14.3.1",
+    "@types/react": "^18.2.74",
+    "@types/react-dom": "^18.2.25",
+    "@typescript-eslint/eslint-plugin": "^7.8.0",
+    "@typescript-eslint/parser": "^7.8.0",
+    "@vitejs/plugin-react-swc": "^3.6.0",
+    "@vitest/coverage-v8": "^1.6.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react-refresh": "^0.4.6",
+    "globals": "^15.8.0",
+    "jsdom": "^24.0.0",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.10",
+    "vite-tsconfig-paths": "^4.3.1",
+    "vitest": "^1.6.0"
+  }
+}

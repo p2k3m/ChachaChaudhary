@@ -1,0 +1,367 @@
+:root {
+  color-scheme: light;
+  font-family: 'Baloo 2', 'Rajdhani', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: #fff7d6;
+  color: #2b1b10;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #fff0b5, #ffd88c 40%, #ffb85c);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  display: grid;
+  min-height: 100vh;
+  grid-template-rows: auto 1fr auto;
+}
+
+.app-shell__main {
+  padding: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+}
+
+.app-shell__footer {
+  text-align: center;
+  padding: 1rem 0 2rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.progress-tracker {
+  list-style: none;
+  margin: 0;
+  padding: 1rem 1.5rem;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.progress-tracker__step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+  font-size: 0.9rem;
+}
+
+.progress-tracker__step.is-active {
+  background: linear-gradient(135deg, #ff8a3d, #ff3d8f);
+  color: #fff;
+}
+
+.progress-tracker__index {
+  font-weight: 700;
+}
+
+.comic-panel {
+  width: min(100%, 1100px);
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 32px;
+  padding: 2rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
+  background-size: cover;
+  background-position: center;
+  display: grid;
+  gap: 2rem;
+}
+
+.comic-panel__header h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 2.8vw, 2.6rem);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.comic-panel__header p {
+  margin: 0.5rem 0 0;
+  font-size: 1.1rem;
+}
+
+.scene-grid,
+.scene-grid--intro,
+.investigation-grid,
+.deduction-grid,
+.solution-grid,
+.score-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.scene-grid {
+  justify-items: center;
+  text-align: center;
+}
+
+.scene-grid--intro {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  align-items: start;
+}
+
+.hero-portrait {
+  width: min(220px, 60vw);
+  border-radius: 24px;
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 0.5rem;
+}
+
+.dialogue-bubble {
+  position: relative;
+  padding: 1rem 1.25rem;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+  max-width: 420px;
+}
+
+.dialogue-bubble__speaker {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+}
+
+.dialogue-bubble__text {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+}
+
+.bubble--excited {
+  background: linear-gradient(135deg, #fff, #ffe8b3);
+}
+
+.bubble--hint {
+  background: linear-gradient(135deg, #fff, #d0f2ff);
+}
+
+.bubble--warning {
+  background: linear-gradient(135deg, #fff, #ffd0d0);
+}
+
+.action-button {
+  border: none;
+  border-radius: 999px;
+  padding: 0.85rem 2.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: box-shadow 0.2s ease;
+}
+
+.action-button--primary {
+  background: linear-gradient(135deg, #ff8a3d, #ff3d8f);
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(255, 61, 143, 0.45);
+}
+
+.action-button--primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-button--secondary {
+  background: #fff;
+  color: #ff3d8f;
+  border: 2px solid #ff3d8f;
+}
+
+.action-button--ghost {
+  background: transparent;
+  color: #2b1b10;
+  border: 2px dashed #2b1b10;
+}
+
+.investigation-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: start;
+}
+
+.investigation-grid__clues,
+.investigation-grid__suspects {
+  display: grid;
+  gap: 1rem;
+}
+
+.investigation-grid__dialogue {
+  display: flex;
+  justify-content: center;
+}
+
+.clue-card,
+.suspect-card {
+  border: none;
+  border-radius: 24px;
+  padding: 1rem;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 16px 24px rgba(0, 0, 0, 0.15);
+}
+
+.clue-card img,
+.suspect-card__avatar {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 18px;
+}
+
+.clue-card--selected,
+.suspect-card--active {
+  outline: 3px solid #ff3d8f;
+}
+
+.clue-card__label,
+.suspect-card__name {
+  display: block;
+  font-weight: 700;
+  margin-top: 0.75rem;
+}
+
+.clue-card__description,
+.suspect-card__statement {
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+}
+
+.deduction-grid {
+  grid-template-columns: 1fr;
+}
+
+.deduction-grid__board {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.deduction-grid__card {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 24px;
+  padding: 1rem;
+  box-shadow: 0 18px 32px rgba(0, 0, 0, 0.15);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.deduction-grid__card header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.deduction-grid__card img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 14px;
+}
+
+.deduction-grid__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.deduction-chip {
+  border-radius: 999px;
+  border: 2px solid #ff8a3d;
+  padding: 0.5rem 0.9rem;
+  background: transparent;
+  font-weight: 600;
+}
+
+.deduction-chip--active {
+  background: #ff8a3d;
+  color: #fff;
+}
+
+.error-text {
+  color: #d93025;
+  font-weight: 600;
+}
+
+.solution-grid {
+  justify-items: center;
+  text-align: center;
+}
+
+.solution-grid__actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.score-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.score-grid__panel {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 24px;
+  padding: 1.25rem;
+  box-shadow: 0 18px 28px rgba(0, 0, 0, 0.12);
+}
+
+.score-grid__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.score-grid__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+  font-weight: 600;
+}
+
+.badge img {
+  width: 32px;
+  height: 32px;
+}
+
+.badge--highlight {
+  background: linear-gradient(135deg, #ffe066, #ffb347);
+}
+
+@media (max-width: 768px) {
+  .comic-panel {
+    padding: 1.5rem;
+  }
+
+  .app-shell__main {
+    padding: 1rem;
+  }
+}
