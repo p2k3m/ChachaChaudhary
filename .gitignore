@@ -1,0 +1,9 @@
+node_modules
+npm-debug.log*
+.DS_Store
+app/dist
+lambda/hint-service/dist
+lambda/hint-service/.asset-cache
+lambda/hint-service/hint-service.zip
+coverage
+.vitest

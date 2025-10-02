@@ -1,0 +1,115 @@
+name: Build and Deploy Missing Mangoes
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      WEBSITE_BUCKET_NAME: ${{ secrets.WEBSITE_BUCKET_NAME }}
+      ASSET_BUCKET_NAME: ${{ secrets.ASSET_BUCKET_NAME }}
+      HINT_CACHE_BUCKET_NAME: ${{ secrets.HINT_CACHE_BUCKET_NAME }}
+      LAMBDA_ARTIFACT_BUCKET: ${{ secrets.LAMBDA_ARTIFACT_BUCKET }}
+      OPENAI_SECRET_ARN: ${{ secrets.OPENAI_SECRET_ARN }}
+      CLOUDFORMATION_STACK_NAME: ${{ secrets.CLOUDFORMATION_STACK_NAME }}
+      ALLOWED_ORIGIN: ${{ secrets.ALLOWED_ORIGIN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        run: |
+          missing=()
+          for var in AWS_REGION WEBSITE_BUCKET_NAME ASSET_BUCKET_NAME HINT_CACHE_BUCKET_NAME \
+            LAMBDA_ARTIFACT_BUCKET OPENAI_SECRET_ARN CLOUDFORMATION_STACK_NAME ALLOWED_ORIGIN \
+            AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+            if [ -z "${!var}" ]; then
+              missing+=("$var")
+            fi
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "❌ Missing required GitHub secrets: ${missing[*]}"
+            echo "Add them in Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            lambda/hint-service/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Lint frontend
+        working-directory: app
+        run: npm run lint
+
+      - name: Test frontend
+        working-directory: app
+        run: npm run test -- --run
+
+      - name: Build frontend
+        working-directory: app
+        run: npm run build
+
+      - name: Install lambda dependencies
+        working-directory: lambda/hint-service
+        run: npm ci && npm run build
+
+      - name: Package hint lambda
+        working-directory: lambda/hint-service
+        run: zip -j ../hint-service.zip dist/index.mjs
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload lambda artifact
+        run: |
+          aws s3 cp lambda/hint-service.zip s3://$LAMBDA_ARTIFACT_BUCKET/artifacts/hint-service-${GITHUB_SHA}.zip
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+
+      - name: Deploy CloudFormation stack
+        run: |
+          aws cloudformation deploy \
+            --stack-name "$CLOUDFORMATION_STACK_NAME" \
+            --template-file infrastructure/template.yaml \
+            --capabilities CAPABILITY_IAM \
+            --parameter-overrides \
+              ProjectName=ChachaChaudhary \
+              WebsiteBucketName=$WEBSITE_BUCKET_NAME \
+              AssetBucketName=$ASSET_BUCKET_NAME \
+              HintCacheBucketName=$HINT_CACHE_BUCKET_NAME \
+              LambdaArtifactBucket=$LAMBDA_ARTIFACT_BUCKET \
+              LambdaArtifactKey=artifacts/hint-service-${GITHUB_SHA}.zip \
+              OpenAISecretArn=$OPENAI_SECRET_ARN \
+              AllowedOrigin=$ALLOWED_ORIGIN
+
+      - name: Sync frontend to S3
+        run: |
+          aws s3 sync app/dist s3://$WEBSITE_BUCKET_NAME/ --delete
+
+      - name: Output distribution URL
+        run: |
+          CLOUDFRONT_URL=$(aws cloudformation describe-stacks --stack-name "$CLOUDFORMATION_STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='CloudFrontUrl'].OutputValue" --output text)
+          HINT_API_URL=$(aws cloudformation describe-stacks --stack-name "$CLOUDFORMATION_STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='HintApiEndpoint'].OutputValue" --output text)
+          echo "CloudFront: $CLOUDFRONT_URL" >> $GITHUB_STEP_SUMMARY
+          echo "Hint API: $HINT_API_URL" >> $GITHUB_STEP_SUMMARY

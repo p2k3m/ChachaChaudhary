@@ -1,0 +1,229 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Serverless deployment for Chacha Choudhary Missing Mangoes Phase 1
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: ChachaChaudhary
+  WebsiteBucketName:
+    Type: String
+    Description: Unique bucket name for hosting the built web app assets.
+  AssetBucketName:
+    Type: String
+    Description: Unique bucket name for storing AI generated art assets.
+  HintCacheBucketName:
+    Type: String
+    Description: Unique bucket name for caching generated hints.
+  LambdaArtifactBucket:
+    Type: String
+    Description: S3 bucket that stores the built hint Lambda artifact.
+  LambdaArtifactKey:
+    Type: String
+    Description: S3 key of the built hint Lambda artifact zip.
+  OpenAISecretArn:
+    Type: String
+    Description: Secrets Manager ARN that stores the OpenAI API key under the apiKey field.
+  AllowedOrigin:
+    Type: String
+    Default: '*'
+    Description: Allowed CORS origin for the hint API.
+
+Resources:
+  WebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref WebsiteBucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+
+  WebsiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WebsiteBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontRead
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: 's3:GetObject'
+            Resource: !Sub '${WebsiteBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${WebsiteDistribution}'
+
+  AssetBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref AssetBucketName
+      VersioningConfiguration:
+        Status: Enabled
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: ['GET', 'HEAD']
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+
+  HintCacheBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref HintCacheBucketName
+      VersioningConfiguration:
+        Status: Enabled
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldHints
+            Status: Enabled
+            ExpirationInDays: 30
+
+  HintFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-hint-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: HintCacheAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                  - 's3:DeleteObject'
+                Resource: !Sub '${HintCacheBucket.Arn}/*'
+
+  HintFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-hint'
+      Runtime: nodejs20.x
+      Handler: index.handler
+      Role: !GetAtt HintFunctionRole.Arn
+      Architectures: ['arm64']
+      Timeout: 15
+      MemorySize: 256
+      Code:
+        S3Bucket: !Ref LambdaArtifactBucket
+        S3Key: !Ref LambdaArtifactKey
+      Environment:
+        Variables:
+          OPENAI_API_KEY: !Sub '{{resolve:secretsmanager:${OpenAISecretArn}:SecretString:apiKey}}'
+          OPENAI_MODEL: gpt-4.1-mini
+          HINT_CACHE_BUCKET: !Ref HintCacheBucket
+          HINT_CACHE_PREFIX: !Sub '${ProjectName}/phase-1'
+          ALLOWED_ORIGIN: !Ref AllowedOrigin
+
+  HintApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub '${ProjectName}-hint-api'
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowCredentials: false
+        AllowHeaders: ['content-type']
+        AllowMethods: ['POST', 'OPTIONS']
+        AllowOrigins: ['*']
+
+  HintIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HintApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HintFunction.Arn}/invocations'
+      PayloadFormatVersion: '2.0'
+
+  HintRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HintApi
+      RouteKey: 'POST /hint'
+      Target: !Sub 'integrations/${HintIntegration}'
+
+  HintStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HintApi
+      StageName: prod
+      AutoDeploy: true
+
+  HintPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref HintFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HintApi}/*/POST/hint'
+
+  WebsiteOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      Name: !Sub '${ProjectName}-oac'
+      OriginAccessControlConfig:
+        Name: !Sub '${ProjectName}-oac'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  WebsiteDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        Origins:
+          - Id: WebsiteBucketOrigin
+            DomainName: !GetAtt WebsiteBucket.RegionalDomainName
+            S3OriginConfig: {}
+            OriginAccessControlId: !Ref WebsiteOriginAccessControl
+        DefaultCacheBehavior:
+          TargetOriginId: WebsiteBucketOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: ['GET', 'HEAD']
+          CachedMethods: ['GET', 'HEAD']
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # CachingOptimized
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+        PriceClass: PriceClass_100
+
+Outputs:
+  WebsiteBucketName:
+    Description: Bucket that hosts the compiled React app.
+    Value: !Ref WebsiteBucket
+  AssetBucketName:
+    Description: Bucket for Raj Comics styled AI assets served to the app.
+    Value: !Ref AssetBucket
+  HintCacheBucketName:
+    Description: Bucket storing persisted hints to avoid repeated LLM calls.
+    Value: !Ref HintCacheBucket
+  HintApiEndpoint:
+    Description: Invoke URL for requesting detective hints.
+    Value: !Sub 'https://${HintApi}.execute-api.${AWS::Region}.amazonaws.com/prod'
+  CloudFrontUrl:
+    Description: Public URL for the Missing Mangoes experience.
+    Value: !Sub 'https://${WebsiteDistribution.DomainName}'

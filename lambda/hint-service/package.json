@@ -1,0 +1,20 @@
+{
+  "name": "hint-service",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/index.mjs",
+    "clean": "rm -rf dist",
+    "generate:assets": "node scripts/generate-assets.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.609.0",
+    "openai": "^4.56.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.136",
+    "esbuild": "^0.21.5",
+    "typescript": "^5.4.5"
+  }
+}
